@@ -20,7 +20,6 @@ from api import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("hello/", views.HelloView.as_view()),
-    path("google/", views.GoogleView.as_view()),
     path('o/callback/', views.OauthCallback.as_view()),
     path('api/auth/', include('djoser.urls.jwt'))
 ]

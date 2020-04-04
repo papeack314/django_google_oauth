@@ -1,6 +1,7 @@
 import os
 import urllib
 import json
+from django.http import HttpResponseRedirect
 from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import User
@@ -28,7 +29,7 @@ class OauthCallback(APIView):
         url = "https://oauth2.googleapis.com/token"
         data = {
             "code": code,
-            "client_id": os.environ["GOOGLE_OAUTH_CLIENT_ID"]
+            "client_id": os.environ["GOOGLE_OAUTH_CLIENT_ID"],
             "client_secret": os.environ["GOOGLE_OAUTH_CLIENT_SECRET"],
             "grant_type": "authorization_code",
             "redirect_uri": "http://localhost:8000/o/callback"
@@ -38,11 +39,8 @@ class OauthCallback(APIView):
         with urllib.request.urlopen(req) as res:
             body = res.read()
         body = json.loads(body.decode("utf-8"))
-        return Response(body)
+        access_token = body["access_token"]
 
-class GoogleView(APIView):
-    def post(self, request):
-        access_token = request.data.get("token")
         with urllib.request.urlopen("https://www.googleapis.com/oauth2/v2/userinfo?access_token=" + access_token) as response:
             data = json.loads(response.read().decode("utf-8"))
         
@@ -62,10 +60,10 @@ class GoogleView(APIView):
             user.save()
         
         token = RefreshToken.for_user(user)
-        response = {}
-        response["username"] = user.username
-        response["access_token"] = str(token.access_token)
-        response["refresh_token"] = str(token)
-        response["data"] = data
-        return Response(response)
+        resp = HttpResponseRedirect(redirect_to='https://google.com')
+        resp.set_cookie("user_name", user.username)
+        resp.set_cookie("access_token", str(token.access_token))
+        resp.set_cookie("refresh_token", str(token))
+        resp.set_cookie("picture_url", data["picture"])
+        return resp
 
